@@ -1,0 +1,132 @@
+gitconf="${HOME}/.gitconfig"
+gitroot="${HOME}/git/"
+
+err() {
+    if [[ -z "$1" ]]
+    then
+        errtype="Error"
+        errmsg="Unspecified error occurred"
+    elif [[ -z "$2" ]]
+    then
+        errtype="Error"
+        errmsg="$1"
+    else
+        errtype="$1"
+        errmsg="$2"
+    fi
+    
+    echo "${errtype}: ${errmsg}" > /dev/stderr
+    return 1
+}
+
+
+gitprop() {
+    if ! [[ -f "${gitconf}" ]]
+    then
+        err "ParameterError" "No git configuration file found"
+        return 1
+    fi
+    
+    value="$( iniget.py ${gitconf} $1 $2 )"
+    if [[ "$?" -ne 0 ]]
+    then
+        err "InputError" "Requested property not found"
+        return 1
+    fi
+    
+    echo "${value}"
+}
+
+gituser() {
+    echo "$(gitprop user name)"
+}
+
+
+gitpath() {
+    if [[ -z "${gitroot}" ]]
+    then
+        echo "$(pwd)/"
+    elif [[ "${gitroot: -1}" == "/" ]]
+    then
+        echo "${gitroot}"
+    else
+        echo "${gitroot}/"
+    fi
+}
+
+gitprojuser() {
+    if [[ -z "$2" ]]
+    then
+        echo "$(gituser)"
+    else
+        echo "$1"
+    fi
+}
+gitprojname() {
+    if [[ -z "$2" ]]
+    then
+        echo "$1"
+    else
+        echo "$2"
+    fi
+}
+
+gituri() {
+    echo "git@github.com:$(gitprojuser $1 $2)/$(gitprojname $1 $2).git"
+}
+
+gitsetup() {
+    if [[ -z "$1" ]]
+    then
+        err "ParameterError" "No git project name supplied"
+        return 1
+    fi
+    
+    proj="$1"
+    bran="$(gitprop init defaultBranch)"
+    cmmt="Initial repo setup"
+    
+    sourcedir="$(gitpath)"
+    targetdir="${sourcedir}${proj}/"
+    
+    mkdir -p "${targetdir}"
+    cp "${sourcedir}LICENSE" "${targetdir}"
+    echo "# ${proj}" >> "${targetdir}README.md"
+    echo "" >> "${targetdir}README.md"
+    echo "" >> "${targetdir}README.md"
+    
+    pushd "${targetdir}"
+    git init
+    git add .
+    git commit -m "${cmmt}"
+    git branch -M "${bran}"
+    git remote add origin "$(gituri ${proj})"
+    git push -u origin "${bran}"
+}
+
+gitclone() {
+    if [[ -z "$1" ]]
+    then
+        err "ParameterError" "No git project name supplied"
+        return 1
+    fi
+    
+    git clone "$(gituri $1 $2)"
+}
+
+gitpush() {
+    if ! [[ -d "./.git" ]]
+    then
+        err "directory does not seem to have a .git subdir"
+        return 1
+    fi
+    
+    git add .
+    git commit -m "$1"
+    git push
+}
+
+cdgit() {
+    pushd "$(gitpath)"
+}
+

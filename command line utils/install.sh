@@ -1,31 +1,53 @@
 #!/usr/bin/env bash
 
-installdir="tools"
-rcfile=".bashrc"
+installdir="tools"  # directory under ${HOME} to install files in
+rcfile=".bashrc"    # file within ${HOME} to link rcsubfiles in
 
-scripts=(
+scripts=(           # executable scripts
     "iniget.py"
 )
 
-sourcefiles=(
-#    ".tools"
+rcsubfiles=(        # run command files
+    ".gitconf"
 )
 
-mkdir -p "${HOME}/${installdir}"
+sourcedir="$(pwd)/"
+targetdir="${HOME}/${installdir}/"
+targetrcf="${HOME}/${rcfile}"
 
-for script in "${scripts[@]}"
+
+appendifmissing() {
+    if [[ -f "$1" ]]
+    then
+        grep -qxF "$2" "$1" || echo "$2" >> "$1"
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Create tools installation directory
+mkdir -p "${targetdir}"
+
+# Copy the required files into install dir
+allfiles=( "${scripts[@]}" "${rcsubfiles[@]}" )
+for f in "${allfiles[@]}"
 do
-    cp "./${script}" "${HOME}/${installdir}/"
+    cp "${sourcedir}${f}" "${targetdir}"
 done
 
-for sourcefile in "${sourcefiles[@]}"
+# Add entries for rc subfiles into main rc file
+for f in "${rcsubfiles[@]}"
 do
-    cp "./${sourcefile}" "${HOME}/${installdir}/"
-    
-    grep -qxF '. "~/${installdir}/${sourcefile}"' "${HOME}/${rcfile}" || \
-    echo '. "~/${installdir}/${sourcefile}"' >> "${HOME}/${rcfile}"
+    appendifmissing "${targetrcf}" ". ~/\"${installdir}\"/\"${f}\""
 done
 
-( echo "${PATH}" | grep -qF "${HOME}/${installdir}/" ) || \
-echo 'export PATH=$PATH:"${HOME}/${installdir}/"' >> "${HOME}/${rcfile}"
-
+# If necessary, check if path to installdir exists within main rc file
+if [[ "${#scripts[@]}" -ne "0" ]]
+then
+    if ! ( echo ":${PATH}:" | grep -qF ":${targetdir}/:" )
+    then
+        appendifmissing "${targetrcf}" "export PATH=\"\${PATH}:${targetdir}\""
+        export PATH="\${PATH}:${targetdir}"
+    fi
+fi
