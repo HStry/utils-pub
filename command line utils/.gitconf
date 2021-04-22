@@ -75,6 +75,45 @@ gituri() {
     echo "git@github.com:$(gitprojuser $1 $2)/$(gitprojname $1 $2).git"
 }
 
+gitstatus() {
+    if [[ -z "$1" ]]
+    then
+        err "ParameterError" "No git project name supplied"
+        return 1
+    fi
+
+    if [[ ! -d "$(gitpath)$1" ]]
+    then
+        err "ParameterError" "Project directory '$(gitpath)$1' not found"
+        return 1
+    fi
+    
+    pushd "$(gitpath)$1" > /dev/null
+    tmp_file="$(mktemp)"
+    
+    script --flush --quiet "${tmp_file}" --command "git status" > /dev/null
+    
+    if grep -Fq "nothing to commit, working tree clean" "${tmp_file}"
+    then
+        echo "$1 clean"
+    else
+        echo "$1 - $(tail -n +2 ${tmp_file})"
+        echo
+    fi
+    
+    rm "${tmp_file}"
+    popd > /dev/null
+}
+
+gitstatuses() {
+    pushd "$(gitpath)" > /dev/null
+    for d in $(ls -d */)
+    do
+        gitstatus "${d%%/}"
+    done
+    popd > /dev/null
+}
+
 gitsetup() {
     if [[ -z "$1" ]]
     then
