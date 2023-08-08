@@ -1,5 +1,5 @@
 [Unit]
-Description = Regenerate the machine id, including host keys.
+Description = Regenerate the machine id and host keys.
 After = local-fs.target
 
 [Service]
@@ -8,4 +8,4 @@ ExecStart = /root/regen_id
 RemainAfterExit = yes
 
 [Install]
-WantedBy = network-online.target
+WantedBy = multi-user.target
