@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Save this file as /root/regen_id
+
+etc_id="/etc/machine-id"
+var_id="/var/lib/dbus/machine-id"
+svc_name="regen_id"
+svc_file="/etc/systemd/system/${svc_name}"
+__file__="/root/regen_id"
+
+echo -n > "${etc_id}"
+systemd-machine-id-setup
+systemd-machine-id-setup --commit
+
+rm -f "${var_id}"; ln -s "${etc_id}" "${var_id}"
+ssh-keygen -A
+
+systemctl disable "${svc_name}"
+rm -f "${svc_file}"
+systemctl daemon-reload
+rm -f "${__file__}"
