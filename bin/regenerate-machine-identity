@@ -1,0 +1,43 @@
+#!/bin/sh
+
+host-keys() {
+}
+
+machine-id() {
+  local eid="/etc/machine-id"
+  local vid="/var/lib/dbus/machine-id"
+  local eidi="$(stat -L -c %i "${eid}")"
+  if [ -f "${vid}" ]; then
+    local vidi="$(stat -L -c %i "${vid}")"
+    if [ "${$eidi}" -ne "${vidi}" ]; then
+      local ts="$(date -u +%Y%m%dT%H%M%SZ)"
+      echo "file '${vid}' backed up to '${vid}-${ts}'." >&2
+      mv "${vid}" "${vid}-${ts}"
+      ln -s "${eid}" "${vid}"
+    fi
+  elif [ -e "${vid}" ]; then
+    echo "Path object '${vid}' expected to be a file or symlink, but it is not." >&2
+    echo "Please manually inspect this, and if possible, make this to be a symlink to '${eid}'." >&2
+  fi
+  dbus-uuidgen --ensure="${eid}"
+}
+
+hostname() {
+}
+
+svc_name="regen_id"
+systemctl disable "${svc_name}.service"
+rm -f "/etc/systemd/system/${svc_name}.service"
+
+
+echo -n > "${etc_id}"
+systemd-machine-id-setup
+systemd-machine-id-setup --commit
+
+rm -f "${var_id}"
+ln -s "${etc_id}" "${var_id}"
+
+rm -f /etc/ssh/ssh_host_*_key{,.pub}
+ssh-keygen -A
+
+rm -f "/root/${svc_name}"
